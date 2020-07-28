@@ -20,6 +20,11 @@ public class JRequest {
     //    结果回调
     private JRequestListener jRequestListener;
 
+    //    图片资源缓存策略，默认无缓存
+    private int souceType = SourceType.SOURCE_NO_CACHE;
+
+    private int cropType = CropType.CROP_NONE;
+
     private int placeholder;
     private int error;
 
@@ -46,7 +51,6 @@ public class JRequest {
     public void into(ImageView imageView) {
         this.imageView = new SoftReference<>(imageView);
         imageView.setTag(urlMd5);
-        RequestManager.getInstance().addRequest(this);
     }
 
     public String getUrl() {
@@ -73,7 +77,21 @@ public class JRequest {
         return jRequestListener;
     }
 
-    public void setjRequestListener(JRequestListener jRequestListener) {
+    public JRequest setjRequestListener(JRequestListener jRequestListener) {
         this.jRequestListener = jRequestListener;
+        return this;
+    }
+
+    public int getSouceType() {
+        return souceType;
+    }
+
+    //    设置缓存策略
+    public void setSouceType(int souceType) {
+        this.souceType = souceType;
+    }
+
+    public void centerCrop() {
+        cropType = CropType.CROP_CENTER;
     }
 }

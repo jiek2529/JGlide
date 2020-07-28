@@ -1,10 +1,8 @@
 package com.jiek.jglide;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.widget.ImageView;
 
 import java.io.FileOutputStream;
@@ -31,13 +29,20 @@ public class JDispacher extends Thread {
             JRequest request = null;
             try {
                 request = requestQueue.take();
+                new Exception().printStackTrace();
                 showImage(request, request.getPlaceholder());
 
-                Bitmap bitmap = findBitmapFromInternet(request);
+                Bitmap bitmap = findBitmap(request);
+                if (bitmap == null) {
+                    continue;
+                }
 //                显示网络下载的图片 Bitmap
                 showImage(request, bitmap);
             } catch (InterruptedException e) {
                 e.printStackTrace();
+                if (request != null && request.getjRequestListener() != null) {
+                    request.getjRequestListener().onFail("图片下载失败");
+                }
             }
         }
     }
@@ -55,13 +60,12 @@ public class JDispacher extends Thread {
         }
     }
 
-    // 占位与错误显示图
+    // 显示下载并处理好的图片
     private void showImage(JRequest request, final Bitmap bitmap) {
+        JRequestListener jRequestListener = request.getjRequestListener();
         if (request != null && bitmap != null &&
                 request.getImageView().getTag().equals(request.getUrlMd5())
         ) {
-            System.out.println("下载完成，并等待2s");
-            SystemClock.sleep(2000);
             final ImageView imageView = request.getImageView();
             System.out.println("ready to show image： " + imageView);
             handler.post(new Runnable() {
@@ -70,11 +74,39 @@ public class JDispacher extends Thread {
                     imageView.setImageBitmap(bitmap);
                 }
             });
+        } else {
+            if (jRequestListener != null) {
+                jRequestListener.onFail("下载失败");
+            }
         }
     }
 
-    private Bitmap findBitmapFromInternet(JRequest request) {
-        return downloadImage(request.getUrl());
+    private Bitmap findBitmap(JRequest request) {
+        String url = request.getUrl();
+        boolean memoryCache = RequestManager.getInstance().hasMemoryCache(url);
+        Bitmap tBitmap;
+        JRequestListener jRequestListener = request.getjRequestListener();
+        if (memoryCache) {
+            tBitmap = RequestManager.getInstance().getMemoryBitmap(url);
+            if (jRequestListener != null) {
+                jRequestListener.onSuccess(tBitmap, SourceType.SOURCE_MEMORY);
+            }
+        } else {
+            tBitmap = downloadImage(request.getUrl());
+            if (tBitmap != null) {
+//                System.out.println("下载完成，并等待2s");
+//                //调试延时显示
+//                SystemClock.sleep(2000);
+                if (jRequestListener != null) {
+                    jRequestListener.onSuccess(tBitmap, SourceType.SOURCE_NET);
+                }
+            } else {
+                if (jRequestListener != null) {
+                    jRequestListener.onFail("下载失败： " + request.getUrl());
+                }
+            }
+        }
+        return tBitmap;
     }
 
     private Bitmap downloadImage(String uri) {
@@ -85,7 +117,8 @@ public class JDispacher extends Thread {
             URL url = new URL(uri);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             is = conn.getInputStream();
-            bitmap = BitmapFactory.decodeStream(is);
+            bitmap = RequestManager.getInstance().saveInputStrem(uri, is);
+//            bitmap = BitmapFactory.decodeStream(is);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

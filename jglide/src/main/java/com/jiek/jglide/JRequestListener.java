@@ -1,7 +1,15 @@
 package com.jiek.jglide;
 
-interface JRequestListener {
-    void onSuccess();
+import android.graphics.Bitmap;
 
-    void onFail();
+public interface JRequestListener {
+    /**
+     * Bitmap 获取成功
+     *
+     * @param bitmap
+     * @param sourceType 图片源类型
+     */
+    void onSuccess(Bitmap bitmap, int sourceType);
+
+    void onFail(String msg);
 }
