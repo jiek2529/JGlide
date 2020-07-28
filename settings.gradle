@@ -1,3 +1,4 @@
 rootProject.name = 'JGlide'
 include ':app'
 include ':jglide'
+include ':logger'
